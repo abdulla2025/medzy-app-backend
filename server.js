@@ -26,28 +26,38 @@ import medicalProfileRoutes from './routes/medicalProfile.js';
 import customerPointRoutes from './routes/customerPoints.js';
 import revenueAdjustmentRoutes from './routes/revenueAdjustments.js';
 
-// Load .env file from current backend directory
+// Load environment variables first
+dotenv.config();
+
+// ES modules fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// Skip file system operations in Vercel serverless environment
+const isVercel = process.env.VERCEL || process.env.NOW_REGION;
+
+// Create uploads directory only in local environment
+if (!isVercel) {
+  const uploadsDir = path.join(__dirname, 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
 }
 
 // Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+const storage = isVercel 
+  ? multer.memoryStorage() // Use memory storage for Vercel
+  : multer.diskStorage({
+      destination: (req, file, cb) => {
+        cb(null, path.join(__dirname, 'uploads'));
+      },
+      filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+      }
+    });
 
 const upload = multer({
   storage: storage,
@@ -78,8 +88,10 @@ connectDB();
 // Initialize email service
 import './services/emailService.js';
 
-// Initialize notification service (includes cron jobs)
-import './services/notificationService.js';
+// Initialize notification service (includes cron jobs) only in local environment
+if (!isVercel) {
+  import('./services/notificationService.js');
+}
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -110,48 +122,42 @@ app.get('/api/health', (req, res) => {
 // Enhanced server startup with port conflict handling
 const startServer = async () => {
   try {
-    const server = app.listen(PORT, () => {
-      console.log(`[0] Server running on port ${PORT}`);
-    });
+    // Only start server in local environment, Vercel handles this
+    if (!isVercel) {
+      const server = app.listen(PORT, () => {
+        console.log(`[0] Server running on port ${PORT}`);
+      });
 
-    // Handle port already in use error
-    server.on('error', (error) => {
-      if (error.code === 'EADDRINUSE') {
-        console.log(`❌ Port ${PORT} is already in use. Please:`);
-        console.log(`   1. Kill the process using port ${PORT}`);
-        console.log(`   2. Or change the PORT in your .env file`);
-        console.log(`   3. Current processes on port ${PORT}:`);
-        
-        // Show processes using the port (Windows/Unix compatible)
-        if (process.platform === 'win32') {
-          console.log(`   Run: netstat -ano | findstr :${PORT}`);
+      // Handle port already in use error
+      server.on('error', (error) => {
+        if (error.code === 'EADDRINUSE') {
+          console.log(`❌ Port ${PORT} is already in use. Please:`);
+          console.log(`1. Stop any other server running on port ${PORT}`);
+          console.log(`2. Use a different port by setting PORT environment variable`);
+          process.exit(1);
         } else {
-          console.log(`   Run: lsof -i :${PORT}`);
+          console.error('Server error:', error);
+          process.exit(1);
         }
-        
-        process.exit(1);
-      } else {
-        console.error('Server error:', error);
-        process.exit(1);
-      }
-    });
-
-    // Graceful shutdown
-    process.on('SIGINT', () => {
-      console.log('\n👋 Received SIGINT. Shutting down gracefully...');
-      server.close(() => {
-        console.log('Process terminated');
-        process.exit(0);
       });
-    });
 
-    process.on('SIGTERM', () => {
-      console.log('\n👋 Received SIGTERM. Shutting down gracefully...');
-      server.close(() => {
-        console.log('Process terminated');
-        process.exit(0);
+      // Graceful shutdown
+      process.on('SIGINT', () => {
+        console.log('\\n👋 Received SIGINT. Shutting down gracefully...');
+        server.close(() => {
+          console.log('Process terminated');
+          process.exit(0);
+        });
       });
-    });
+
+      process.on('SIGTERM', () => {
+        console.log('\\n👋 Received SIGTERM. Shutting down gracefully...');
+        server.close(() => {
+          console.log('Process terminated');
+          process.exit(0);
+        });
+      });
+    }
 
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -159,10 +165,10 @@ const startServer = async () => {
   }
 };
 
-// Start the server only if not in production (Vercel will handle this)
-if (process.env.NODE_ENV !== 'production') {
+// Start server only in local environment
+if (!isVercel) {
   startServer();
 }
 
-// Export the app for Vercel
+// Export app for Vercel
 export default app;
