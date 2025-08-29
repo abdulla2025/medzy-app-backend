@@ -3,9 +3,12 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fs from 'fs';
-import multer from 'multer';
 import connectDB from './config/database.js';
+
+// Load environment variables first
+dotenv.config();
+
+// Import routes
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import profileRoutes from './routes/profile.js';
@@ -26,71 +29,37 @@ import medicalProfileRoutes from './routes/medicalProfile.js';
 import customerPointRoutes from './routes/customerPoints.js';
 import revenueAdjustmentRoutes from './routes/revenueAdjustments.js';
 
-// Load environment variables first
-dotenv.config();
-
-// ES modules fix for __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Create Express app
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Skip file system operations in Vercel serverless environment
-const isVercel = process.env.VERCEL || process.env.NOW_REGION;
-
-// Create uploads directory only in local environment
-if (!isVercel) {
-  const uploadsDir = path.join(__dirname, 'uploads');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-}
-
-// Configure multer for file uploads
-const storage = isVercel 
-  ? multer.memoryStorage() // Use memory storage for Vercel
-  : multer.diskStorage({
-      destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, 'uploads'));
-      },
-      filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-      }
-    });
-
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    // Check if file is an image
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed!'), false);
-    }
-  },
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
-});
-
-// Make upload middleware available globally
-app.locals.upload = upload;
+// Detect if running in Vercel
+const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
 
 // Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true })); // For SSL Commerce form data
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://medzy-app-frontend.vercel.app'] 
+    : ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Connect to MongoDB
 connectDB();
 
-// Initialize email service
-import './services/emailService.js';
-
-// Initialize notification service (includes cron jobs) only in local environment
+// Initialize services only in local environment (skip in Vercel)
 if (!isVercel) {
-  import('./services/notificationService.js');
+  try {
+    // Initialize email service
+    await import('./services/emailService.js');
+    
+    // Initialize notification service (includes cron jobs)
+    await import('./services/notificationService.js');
+  } catch (error) {
+    console.log('Service initialization skipped in serverless environment');
+  }
 }
 
 // Routes
@@ -114,9 +83,40 @@ app.use('/api/medical-profile', medicalProfileRoutes);
 app.use('/api/customer-points', customerPointRoutes);
 app.use('/api/revenue-adjustments', revenueAdjustmentRoutes);
 
-// Health check
+// Health check endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Medzy Healthcare & Medicine Tracker API', 
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 app.get('/api/health', (req, res) => {
-  res.json({ message: 'Medsy Backend Server is running!', timestamp: new Date() });
+  res.json({ 
+    message: 'Medzy Backend Server is running!', 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err.stack);
+  res.status(500).json({
+    message: 'Something went wrong!',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    message: 'Route not found',
+    path: req.path
+  });
 });
 
 // Enhanced server startup with port conflict handling
