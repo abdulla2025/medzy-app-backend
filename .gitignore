@@ -1,0 +1,214 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables (KEEP .env FOR DEVELOPMENT)
+.env.production
+.env.staging
+.env.local
+.env.*
+!.env
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+.nyc_output
+
+# Build outputs
+dist/
+build/
+.vercel/
+
+# Editor files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+ehthumbs.db
+
+# Uploads (if you have file uploads)
+uploads/*
+!uploads/.gitkeep
+
+# Temporary files
+*.tmp
+tmp/
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript v1 declaration files
+typings/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Environment variables (CRITICAL FOR SECURITY)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+.env.staging
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+
+# Build outputs
+dist/
+build/
+dist-ssr/
+.output/
+.vercel/
+.next/
+
+# Cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
+# Payment Gateway & API Keys (CRITICAL FOR SECURITY)
+config/keys.js
+config/prod.js
+config/dev.js
+
+# SSL Certificates and Keys (CRITICAL FOR SECURITY)
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+*.rdb
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Local development
+.local
+
+# Uploads and user generated content (sensitive files)
+uploads/*
+!uploads/.gitkeep
+uploads/profiles/
+uploads/documents/
+uploads/temp/
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# OCR training data (potentially large files)
+*.traineddata
+!eng.traineddata
+
+# Service worker and PWA files
+sw.js
+workbox-*.js
+
+# Firebase config (if used)
+firebase-adminsdk-*.json
+firebase-config.json
+
+# AWS credentials
+.aws/
+
+# Docker
+.dockerignore
+Dockerfile.dev
+docker-compose.override.yml
+
+# Testing
+coverage/
+.nyc_output/
+
+# Storybook
+storybook-static/
+
+# Temporary folders
+.tmp/
+.temp/
+
+# Package manager lock files (optional - uncomment if needed)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Local Netlify folder
+.netlify
+
+# Sentry
+.sentryclirc
